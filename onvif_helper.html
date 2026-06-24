@@ -164,6 +164,8 @@ function manualCardHtml(){
     "<input type=\"text\" id=\"mHq\" placeholder=\"rtsp://user:pass@192.168.1.50/stream6\" autocomplete=\"off\">" +
     "<label for=\"mLq\">Low-quality RTSP URL <span style=\"text-transform:none;color:#5d6b78\">(optional)</span></label>" +
     "<input type=\"text\" id=\"mLq\" placeholder=\"rtsp://user:pass@192.168.1.50/stream7\" autocomplete=\"off\">" +
+    "<label style=\"display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;cursor:pointer\">" +
+    "<input type=\"checkbox\" id=\"mAudio\" style=\"width:16px;height:16px;accent-color:#2563eb\"> This stream carries audio</label>" +
     "<button id=\"addManualBtn\" onclick=\"doAdoptManual()\">Add stream URL as camera</button>" +
     "</div>";
 }
@@ -228,9 +230,10 @@ function doAdopt(){
 
 function doAdoptManual(){
   var hq=($("mHq").value||"").trim(), lq=($("mLq").value||"").trim(), nm=($("mName").value||"").trim();
+  var aud=!!($("mAudio")&&$("mAudio").checked);
   if(!hq){ setStatus("Enter the high-quality RTSP URL for the stream.", true); return; }
-  var streams=[{ uri:hq, quality:"high", name:(nm||"Stream")+" (high)" }];
-  if(lq){ streams.push({ uri:lq, quality:"low", name:(nm||"Stream")+" (low)" }); }
+  var streams=[{ uri:hq, quality:"high", name:(nm||"Stream")+" (high)", hasAudio:aud }];
+  if(lq){ streams.push({ uri:lq, quality:"low", name:(nm||"Stream")+" (low)", hasAudio:aud }); }
   var body={
     host: $("host").value.trim(),
     username: $("user").value,
