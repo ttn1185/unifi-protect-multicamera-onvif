@@ -83,6 +83,28 @@ edits.append((
  r'''else n={host:o,username:i,password:a,user:e.user,profileTokens:e.body.profileTokens,macSalt:e.body.macSalt,manualStreams:e.body.manualStreams}''',
 ))
 
+# R12: don't let Protect's periodic ONVIF re-sync overwrite a manually-added stream.
+#   syncOnvifCameraConfig() re-probes the camera over ONVIF and rewrites rtspUrl/
+#   rtspUrlLQ/channels from the discovered profiles. For a camera added via the
+#   helper's stream-URL path that is *also* ONVIF-reachable (e.g. a Tapo dual-lens:
+#   wide over ONVIF, telephoto by URL), this clobbers the hand-entered stream6/stream7
+#   back to the wide-lens stream1/stream2. Manual cameras are tagged with a
+#   profileToken of "manual-*" (see R4); bail out for them so the URL sticks. (issue #7)
+edits.append((
+ "R12 skip ONVIF config sync for manual streams",
+ r'''t.syncOnvifCameraConfig=async(e,t,r)=>{var i,d,l,u,p,m,f,g,h,v,y,S,E,_;if(!r.success)return;''',
+ r'''t.syncOnvifCameraConfig=async(e,t,r)=>{var i,d,l,u,p,m,f,g,h,v,y,S,E,_;if(!r.success)return;if(t.thirdPartyCameraInfo&&"string"==typeof t.thirdPartyCameraInfo.profileToken&&0===t.thirdPartyCameraInfo.profileToken.indexOf("manual"))return;''',
+))
+
+# R13: same guard for updateOnvifCameraInfo (re-probes ONVIF to refresh hasAudio/
+#   errors/featureFlags) — skip it for manual-stream cameras so they aren't probed
+#   against the wrong lens. (issue #7)
+edits.append((
+ "R13 skip ONVIF info refresh for manual streams",
+ r'''t.updateOnvifCameraInfo=async(e,t)=>{i.default.ok(e.host,"Camera host is not defined")''',
+ r'''t.updateOnvifCameraInfo=async(e,t)=>{if(e.thirdPartyCameraInfo&&"string"==typeof e.thirdPartyCameraInfo.profileToken&&0===e.thirdPartyCameraInfo.profileToken.indexOf("manual"))return;i.default.ok(e.host,"Camera host is not defined")''',
+))
+
 # ---- R11: add /probe route, the helper HTML, and the /onvif-helper GET route ----
 PROBE_ROUTE = r'''E.route({method:g.MethodNames.POST,path:"/third-party-cameras/probe",description:"Probe an ONVIF camera for available streams without adopting",summary:"Probe ONVIF streams",tags:_,schema:{requestBody:{content:{[f.ContentTypes.JSON]:{schema:T}}},responses:(0,p.defaultJsonResponse)({[h.StatusCodes.OK]:{description:"Probe result"},[h.StatusCodes.BAD_REQUEST]:{description:"Unsupported camera"}})},handlers:[(0,S.validateUserPermission)(s.AccessMode.CREATE,"camera"),(0,y.validateGranularUserPermission)(c.GranularAccess.SETTINGS_EDIT,s.AccessMode.CREATE,n.NvrDecalModel.modelKey,a.CameraDecalModel.modelKey),(0,u.createPayloadValidator)("body",T),async function(e,t){const{id:r,host:o,username:i,password:a}=e.body;let m;if(r){const t=this.store.findByPk("camera",e.body.id);if(!t)throw new l.NotFoundError({info:{entity:"camera",id:e.body.id}});m={camera:t,username:i,password:a,user:e.user}}else m={host:o,username:i,password:a,user:e.user};const P=await(0,d.publish)("thirdPartyCameras.probe",m);P?t.json(P):t.status(400).end()}]});'''
 
