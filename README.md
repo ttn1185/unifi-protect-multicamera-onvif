@@ -143,7 +143,7 @@ with** so the session cookie applies.
 | File | Purpose |
 |---|---|
 | `apply.sh` | backup → patch → syntax‑check → swap → install the page to the runtime path |
-| `patch_onvif.py` | the 13 anchored edits; reads `onvif_helper.html` from its own directory |
+| `patch_onvif.py` | the 14 anchored edits; reads `onvif_helper.html` from its own directory |
 | `onvif_helper.html` | the picker UI; installed to `/etc/unifi-protect/onvif-mod/` (read live) and embedded in `service.js` as a fallback |
 | `tools/onvif_diag.py` | diagnostics: dumps a **redacted** snapshot of third‑party camera records grouped by host (for multi‑lens bug reports) — `sudo python3 tools/onvif_diag.py` |
 
@@ -167,6 +167,10 @@ with** so the session cookie applies.
   (wide‑lens) stream. Re‑adopt the stream if you ever change the URL.
 - Adopting via **Add stream URL** or a non‑first video source always uses a synthetic MAC,
   so it lands as a separate Protect device and never collides with the primary.
+- Manual‑stream cameras adopt with **PTZ disabled** (a raw RTSP stream has no ONVIF PTZ
+  binding — leaving it on made the iOS app crash trying to drive it) and at a sane default
+  frame rate / bitrate. Tick **This stream carries audio** in the picker if your RTSP URL
+  includes an audio track, so Protect shows the audio controls; leave it off otherwise.
 - **Dashboard live view with two devices on one IP:** Protect's Dashboard grid binds a
   live tile per camera IP, so when two Protect devices share one camera IP (a multi‑lens
   rig, or a manual stream added next to the ONVIF lens) only the **first‑adopted** one

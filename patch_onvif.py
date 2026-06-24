@@ -38,7 +38,18 @@ edits.append((
 edits.append((
  "R4 adopt stream selection + manual streams + per-source snapshot",
  r'''const{streams:E,hqStream:_,lqStream:T,encoding:A}=(0,p.getStreamData)(S),R=S.snapshotUri;''',
- r'''const __man=Array.isArray(t.manualStreams)?t.manualStreams.filter(m=>m&&m.uri):[],__sel=Array.isArray(t.profileTokens)&&t.profileTokens.length>0?t.profileTokens:null,__Sx=__sel?{...S,streams:S.streams.filter(x=>__sel.includes(x.profileToken)).sort((a,b)=>__sel.indexOf(a.profileToken)-__sel.indexOf(b.profileToken))}:S,__Sf=__man.length>0?{...S,streams:__man.map((m,i)=>({resolution:{width:Number(m.width)||(0===i?1920:640),height:Number(m.height)||(0===i?1080:480)},encoding:m.encoding||"h264",quality:"",bitrate:0,fps:0,uri:m.uri,hasAudio:!1,profileToken:"manual-"+i,profileName:m.name||"Manual stream "+(i+1),videoSourceToken:t.macSalt||"manual",snapshotUri:void 0}))}:__sel&&__Sx.streams.length>0?__Sx:S;const{streams:E,hqStream:_,lqStream:T,encoding:A}=(0,p.getStreamData)(__Sf),R=_&&_.snapshotUri||S.snapshotUri;''',
+ r'''const __man=Array.isArray(t.manualStreams)?t.manualStreams.filter(m=>m&&m.uri):[],__sel=Array.isArray(t.profileTokens)&&t.profileTokens.length>0?t.profileTokens:null,__Sx=__sel?{...S,streams:S.streams.filter(x=>__sel.includes(x.profileToken)).sort((a,b)=>__sel.indexOf(a.profileToken)-__sel.indexOf(b.profileToken))}:S,__Sf=__man.length>0?{...S,ptz:!1,streams:__man.map((m,i)=>({resolution:{width:Number(m.width)||(0===i?1920:640),height:Number(m.height)||(0===i?1080:480)},encoding:m.encoding||"h264",quality:"",bitrate:Number(m.bitrate)>0?Number(m.bitrate):(0===i?2048:512),fps:Number(m.fps)>0?Number(m.fps):30,uri:m.uri,hasAudio:!!m.hasAudio,profileToken:"manual-"+i,profileName:m.name||"Manual stream "+(i+1),videoSourceToken:t.macSalt||"manual",snapshotUri:void 0}))}:__sel&&__Sx.streams.length>0?__Sx:S;const{streams:E,hqStream:_,lqStream:T,encoding:A}=(0,p.getStreamData)(__Sf),R=_&&_.snapshotUri||S.snapshotUri;''',
+))
+
+# R14: build the camera settings from the (manual-aware) __Sf instead of S, so manual
+#   streams adopt with PTZ disabled. A raw RTSP stream has no ONVIF PTZ binding, but the
+#   manual camera was inheriting ptzControlEnabled from the wide-lens probe (S.ptz=true);
+#   the iOS/web app then fires /ptz/home + /enable-control, times out, and crashes. __Sf
+#   carries ptz:false for manual adopts and S's own ptz otherwise. (issue #10)
+edits.append((
+ "R14 adopt camera settings from __Sf (ptz off for manual)",
+ r'''(0,m.getOnvifDefaultCameraSettings)(e.store,S,E)''',
+ r'''(0,m.getOnvifDefaultCameraSettings)(e.store,__Sf,E)''',
 ))
 
 # R5: adopt subscriber -> optional per-source MAC salt so multiple cameras behind one endpoint stay distinct
@@ -66,7 +77,7 @@ edits.append((
 edits.append((
  "R8 router schema profileTokens/macSalt/manualStreams",
  r'''.and(i.z.object({username:i.z.string(),password:i.z.string()}))''',
- r'''.and(i.z.object({username:i.z.string(),password:i.z.string(),profileTokens:i.z.array(i.z.string()).optional(),macSalt:i.z.string().optional(),manualStreams:i.z.array(i.z.object({uri:i.z.string(),quality:i.z.string().optional(),name:i.z.string().optional(),encoding:i.z.string().optional(),width:i.z.number().optional(),height:i.z.number().optional()})).optional()}))''',
+ r'''.and(i.z.object({username:i.z.string(),password:i.z.string(),profileTokens:i.z.array(i.z.string()).optional(),macSalt:i.z.string().optional(),manualStreams:i.z.array(i.z.object({uri:i.z.string(),quality:i.z.string().optional(),name:i.z.string().optional(),encoding:i.z.string().optional(),width:i.z.number().optional(),height:i.z.number().optional(),hasAudio:i.z.boolean().optional(),fps:i.z.number().optional(),bitrate:i.z.number().optional()})).optional()}))''',
 ))
 
 # R9: thread selection through adopt route (camera branch)
