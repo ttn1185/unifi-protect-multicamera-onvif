@@ -9,10 +9,11 @@ After you authenticate to an ONVIF device you get a lightweight web page that:
 - Lists every usable (H.264/H.265) media profile the camera exposes.
 - Groups profiles by **video source**, so multi‑sensor / NVR‑style devices that present
   several physical cameras behind one IP show a **dropdown** to pick which camera.
-- **1–2 streams** on a source → nothing to choose; Protect uses them as main + sub.
-- **More than 2 streams** → a **checkbox list** to choose which streams to add. The
-  highest‑resolution checked stream becomes **High**, then **Medium**, then **Low**
-  (Protect uses up to three channels, but exposes only 2 to the user).
+- **1–2 streams** on a source → nothing to choose; Protect uses them as its two profiles,
+  **High** + **Low**.
+- **More than 2 streams** → a **checkbox list** to choose which streams to add. Of the
+  streams you check, the highest‑resolution becomes **High** and the lowest becomes **Low**
+  — Protect uses just **two** profiles (High and Low) for these cameras.
 - Adds each selected camera. When a device exposes multiple video sources, each one you
   add becomes its own Protect device. The **first** source keeps the rig's real MAC so
   Protect's own discovery stops offering it once adopted; the extra sources get a
@@ -148,8 +149,9 @@ with** so the session cookie applies.
 
 ## Notes & limitations
 
-- Protect's channel model is fixed at three (High/Medium/Low); a single source contributes
-  at most three streams. Checking more than three just uses the top three by resolution.
+- Protect uses **two** profiles for these cameras — **High** and **Low**. Of the streams you
+  check, the highest‑resolution becomes High and the lowest becomes Low; any in between are
+  ignored.
 - Selected streams should share one codec — Protect collapses a camera to a single codec.
 - Multi‑source ("multiple cameras behind one IP") support relies on the device reporting a
   distinct ONVIF `VideoSourceConfiguration` token per sensor. Devices that don't will show
@@ -162,3 +164,24 @@ with** so the session cookie applies.
 - Adopting via **Add stream URL** or a non‑first video source always uses a synthetic MAC,
   so it lands as a separate Protect device and never collides with the primary.
 - Not affiliated with or endorsed by Ubiquiti.
+
+---
+
+## Security & supported versions
+
+"Supported" here means the **UniFi Protect build** the patch is anchored to — this repo has no
+release tags; the latest tested state always lives on `main`.
+
+| UniFi Protect version | Status |
+|---|---|
+| **7.1.83** | ✅ Supported — developed and tested against this build |
+| Other 7.1.x | ⚠️ Best effort — patches only if the anchors still match, **aborts safely** otherwise |
+| ≤ 7.0.x and ≥ 7.2.0 | ❌ Untested — expect a safe abort |
+
+The mod only adds routes behind Protect's existing **authenticated** third‑party‑camera API on
+its own origin; it stores no credentials and sends nothing to third parties. The anchored patch
+can't half‑apply — `patch_onvif.py` requires each anchor exactly once and `apply.sh` syntax‑checks
+the result and keeps a timestamped backup before swapping anything in.
+
+Found a security issue? Please **don't** open a public issue — see [`SECURITY.md`](SECURITY.md)
+for private reporting and the full policy.
