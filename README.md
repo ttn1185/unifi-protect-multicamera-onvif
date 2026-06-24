@@ -124,6 +124,7 @@ before replacing, and refuses to apply twice — so it either patches cleanly or
 | New `probe` action | authenticate and return streams grouped by video source **without** adopting (`POST /third-party-cameras/probe`) |
 | Adopt subscriber | accept optional `profileTokens` (ordered selection) → build channels from exactly those; optional `manualStreams` build channels from caller‑supplied RTSP URLs (non‑ONVIF sensors); use the chosen source's snapshot as the thumbnail; optional `macSalt` keeps multiple sources distinct |
 | Router | extend the request schema with `profileTokens` + `macSalt` + `manualStreams`; add the `probe` route and serve the picker page at `GET /third-party-cameras/onvif-helper` |
+| ONVIF re‑sync (`syncOnvifCameraConfig` / `updateOnvifCameraInfo`) | **skip** cameras tagged as manual (`profileToken` of `manual-*`) so Protect's periodic ONVIF re‑probe doesn't overwrite a hand‑entered stream URL back to the camera's ONVIF profiles |
 
 The picker page is served by that GET route from the same origin as Protect, so it shares
 your login session — no separate web server, no CORS. At request time the route reads
@@ -142,7 +143,7 @@ with** so the session cookie applies.
 | File | Purpose |
 |---|---|
 | `apply.sh` | backup → patch → syntax‑check → swap → install the page to the runtime path |
-| `patch_onvif.py` | the 11 anchored edits; reads `onvif_helper.html` from its own directory |
+| `patch_onvif.py` | the 13 anchored edits; reads `onvif_helper.html` from its own directory |
 | `onvif_helper.html` | the picker UI; installed to `/etc/unifi-protect/onvif-mod/` (read live) and embedded in `service.js` as a fallback |
 | `tools/onvif_diag.py` | diagnostics: dumps a **redacted** snapshot of third‑party camera records grouped by host (for multi‑lens bug reports) — `sudo python3 tools/onvif_diag.py` |
 
@@ -161,9 +162,17 @@ with** so the session cookie applies.
 - Manual stream URLs are adopted on top of an ONVIF authentication to the same host (used
   for the device name, MAC, and a fallback thumbnail), so the camera must still answer
   ONVIF on at least one lens. Protect refines the channel resolution from the live stream
-  once connected.
+  once connected. The mod **suppresses Protect's periodic ONVIF re‑sync** for these manual
+  cameras, otherwise it would overwrite your hand‑entered URL with the camera's ONVIF
+  (wide‑lens) stream. Re‑adopt the stream if you ever change the URL.
 - Adopting via **Add stream URL** or a non‑first video source always uses a synthetic MAC,
   so it lands as a separate Protect device and never collides with the primary.
+- **Dashboard live view with two devices on one IP:** Protect's Dashboard grid binds a
+  live tile per camera IP, so when two Protect devices share one camera IP (a multi‑lens
+  rig, or a manual stream added next to the ONVIF lens) only the **first‑adopted** one
+  reliably shows live on the Dashboard; the second can show black even though **Playback →
+  Live works for both**. Workaround: **add the helper/manual lens first, then adopt the
+  native ONVIF lens.** This is Protect's own behavior, not something the patch controls.
 - Not affiliated with or endorsed by Ubiquiti.
 
 ---
